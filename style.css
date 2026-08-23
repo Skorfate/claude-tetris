@@ -234,3 +234,32 @@ kbd {
 #restart-btn:hover {
   background: #9bbdff;
 }
+
+/* ---- Skin selector ---- */
+#skin-select {
+  background: var(--kbd-bg);
+  border: 1px solid var(--kbd-border);
+  border-radius: 4px;
+  padding: 4px 6px;
+  font-size: 12px;
+  font-family: inherit;
+  color: var(--kbd-text);
+  cursor: pointer;
+}
+
+/* ---- Skins ---- */
+body.skin-neon #board,
+body.skin-neon #next-canvas {
+  background: #000;
+  box-shadow: 0 0 30px rgba(125, 180, 255, 0.35);
+}
+
+body.skin-pastel #board,
+body.skin-pastel #next-canvas {
+  border-radius: 14px;
+}
+
+body.skin-pixel #board,
+body.skin-pixel #next-canvas {
+  image-rendering: pixelated;
+}
