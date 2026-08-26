@@ -385,6 +385,35 @@ kbd {
   border-color: #e57373;
 }
 
+/* ---- Skin selector ---- */
+#skin-select {
+  background: var(--kbd-bg);
+  border: 1px solid var(--kbd-border);
+  border-radius: 4px;
+  padding: 4px 6px;
+  font-size: 12px;
+  font-family: inherit;
+  color: var(--kbd-text);
+  cursor: pointer;
+}
+
+/* ---- Skins ---- */
+body.skin-neon #board,
+body.skin-neon #next-canvas {
+  background: #000;
+  box-shadow: 0 0 30px rgba(125, 180, 255, 0.35);
+}
+
+body.skin-pastel #board,
+body.skin-pastel #next-canvas {
+  border-radius: 14px;
+}
+
+body.skin-pixel #board,
+body.skin-pixel #next-canvas {
+  image-rendering: pixelated;
+}
+
 /* Utilidad genérica de visibilidad. Declarada al final para que gane
    frente a reglas de igual especificidad (ej. `.pause-panel`,
    `.controls-panel`) que definan su propio `display`. */

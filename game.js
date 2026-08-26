@@ -30,6 +30,8 @@ const PIECES = [
 
 const LINE_SCORES = [0, 100, 300, 500, 800];
 
+let currentSkin = localStorage.getItem('tetris-skin') || 'retro';
+
 const canvas = document.getElementById('board');
 const ctx = canvas.getContext('2d');
 const nextCanvas = document.getElementById('next-canvas');
@@ -247,15 +249,82 @@ function updateHUD() {
   levelEl.textContent = level;
 }
 
+function hexToRgb(hex) {
+  const n = parseInt(hex.slice(1), 16);
+  return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+}
+
+function rgbToHex(r, g, b) {
+  const c = v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0');
+  return `#${c(r)}${c(g)}${c(b)}`;
+}
+
+function pastelize(hex) {
+  const { r, g, b } = hexToRgb(hex);
+  return rgbToHex(r + (255 - r) * 0.5, g + (255 - g) * 0.5, b + (255 - b) * 0.5);
+}
+
+function darken(hex, amount) {
+  const { r, g, b } = hexToRgb(hex);
+  return rgbToHex(r * (1 - amount), g * (1 - amount), b * (1 - amount));
+}
+
 function drawBlock(context, x, y, colorIndex, size, alpha) {
   if (!colorIndex) return;
   const color = COLORS[colorIndex];
   context.globalAlpha = alpha ?? 1;
-  context.fillStyle = color;
-  context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
-  // highlight
-  context.fillStyle = 'rgba(255,255,255,0.12)';
-  context.fillRect(x * size + 1, y * size + 1, size - 2, 4);
+
+  switch (currentSkin) {
+    case 'neon': {
+      context.shadowColor = color;
+      context.shadowBlur = 12;
+      context.fillStyle = color;
+      context.fillRect(x * size + 2, y * size + 2, size - 4, size - 4);
+      break;
+    }
+    case 'pastel': {
+      const soft = pastelize(color);
+      context.fillStyle = soft;
+      if (typeof context.roundRect === 'function') {
+        context.beginPath();
+        context.roundRect(x * size + 1, y * size + 1, size - 2, size - 2, 5);
+        context.fill();
+      } else {
+        context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
+      }
+      break;
+    }
+    case 'pixel': {
+      context.fillStyle = color;
+      context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
+      const dark = darken(color, 0.2);
+      const cell = (size - 2) / 3;
+      for (let sr = 0; sr < 3; sr++) {
+        for (let sc = 0; sc < 3; sc++) {
+          if ((sr + sc) % 2 === 0) continue;
+          context.fillStyle = dark;
+          context.fillRect(
+            x * size + 1 + sc * cell,
+            y * size + 1 + sr * cell,
+            cell,
+            cell
+          );
+        }
+      }
+      break;
+    }
+    case 'retro':
+    default: {
+      context.fillStyle = color;
+      context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
+      // highlight
+      context.fillStyle = 'rgba(255,255,255,0.12)';
+      context.fillRect(x * size + 1, y * size + 1, size - 2, 4);
+      break;
+    }
+  }
+
+  context.shadowBlur = 0;
   context.globalAlpha = 1;
 }
 
@@ -424,8 +493,8 @@ function init(startLevel) {
 }
 
 document.addEventListener('keydown', e => {
-  if (e.code === 'Escape' && document.activeElement === startLevelSelect) {
-    startLevelSelect.blur();
+  if (e.target && e.target.tagName === 'SELECT') {
+    if (e.code === 'Escape') e.target.blur();
     return;
   }
   if (e.code === 'KeyP' || e.code === 'Escape') { togglePause(); return; }
@@ -514,6 +583,24 @@ themeToggle.addEventListener('click', () => {
   const isLight = !document.body.classList.contains('light-mode');
   applyTheme(isLight);
   localStorage.setItem('tetris-theme', isLight ? 'light' : 'dark');
+});
+
+const skinSelect = document.getElementById('skin-select');
+
+function applySkinClass(skin) {
+  document.body.classList.remove('skin-retro', 'skin-neon', 'skin-pastel', 'skin-pixel');
+  document.body.classList.add(`skin-${skin}`);
+}
+
+applySkinClass(currentSkin);
+skinSelect.value = currentSkin;
+
+skinSelect.addEventListener('change', () => {
+  currentSkin = skinSelect.value;
+  localStorage.setItem('tetris-skin', currentSkin);
+  applySkinClass(currentSkin);
+  draw();
+  drawNext();
 });
 
 init();
