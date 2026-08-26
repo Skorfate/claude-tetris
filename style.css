@@ -192,10 +192,6 @@ kbd {
   transition: background 0.25s;
 }
 
-.overlay.hidden {
-  display: none;
-}
-
 .overlay-box {
   text-align: center;
   display: flex;
@@ -217,7 +213,9 @@ kbd {
   color: #7aa2f7;
 }
 
-#restart-btn {
+#restart-btn,
+.pause-panel button,
+.controls-panel button {
   margin-top: 8px;
   background: #7aa2f7;
   color: #0f0f17;
@@ -231,6 +229,77 @@ kbd {
   transition: background 0.15s;
 }
 
-#restart-btn:hover {
+#restart-btn:hover,
+.pause-panel button:hover,
+.controls-panel button:hover {
   background: #9bbdff;
 }
+
+/* ---- Menú de pausa ---- */
+.pause-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: stretch;
+  min-width: 200px;
+}
+
+.start-level-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.start-level-field label {
+  font-size: 10px;
+  letter-spacing: 2px;
+  color: var(--label);
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.start-level-field select {
+  background: var(--kbd-bg);
+  border: 1px solid var(--kbd-border);
+  border-radius: 4px;
+  color: var(--text);
+  font-size: 14px;
+  font-family: inherit;
+  padding: 6px 10px;
+  cursor: pointer;
+  transition: background 0.25s, color 0.25s, border-color 0.25s;
+}
+
+/* ---- Panel de controles (dentro del menú de pausa) ---- */
+.controls-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: stretch;
+  min-width: 200px;
+}
+
+.controls-panel ul {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.controls-panel li {
+  font-size: 13px;
+  color: var(--controls-text);
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  transition: color 0.25s;
+}
+
+/* Utilidad genérica de visibilidad. Declarada al final para que gane
+   frente a reglas de igual especificidad (ej. `.pause-panel`,
+   `.controls-panel`) que definan su propio `display`. */
+.hidden {
+  display: none;
+}
+
