@@ -39,6 +39,7 @@ const nextCtx = nextCanvas.getContext('2d');
 const scoreEl = document.getElementById('score');
 const linesEl = document.getElementById('lines');
 const levelEl = document.getElementById('level');
+const bombsEl = document.getElementById('bombs');
 const overlay = document.getElementById('overlay');
 const overlayTitle = document.getElementById('overlay-title');
 const overlayScore = document.getElementById('overlay-score');
@@ -61,6 +62,9 @@ const saveScoreBtn = document.getElementById('save-score-btn');
 
 let board, current, next, score, lines, level, paused, gameOver, lastTime, dropAccum, dropInterval, animId, runStartLevel;
 let combo = 0;
+let bombs = 0;
+const BOMB_START_COUNT = 2;
+const BOMB_COLOR = '#e53935';
 let bestCombo = getBestCombo();
 let bestLines = getBestLines();
 
@@ -152,6 +156,10 @@ function rotateCW(shape) {
 }
 
 function tryRotate() {
+  if (current.isBomb) {
+    current.bombOrientation = current.bombOrientation === 'h' ? 'v' : 'h';
+    return;
+  }
   const rotated = rotateCW(current.shape);
   const kicks = [0, -1, 1, -2, 2];
   for (const kick of kicks) {
@@ -218,7 +226,32 @@ function softDrop() {
   }
 }
 
+function detonateBomb() {
+  const by = current.y;
+  const bx = current.x;
+  if (current.bombOrientation === 'v') {
+    for (let r = 0; r < ROWS; r++) board[r][bx] = 0;
+  } else {
+    board.splice(by, 1);
+    board.unshift(new Array(COLS).fill(0));
+    lines += 1;
+    if (lines > bestLines) {
+      bestLines = lines;
+      setBestLines(bestLines);
+      renderStats();
+    }
+  }
+  score += (LINE_SCORES[1] || 0) * level;
+  updateHUD();
+}
+
 function lockPiece() {
+  if (current.isBomb) {
+    detonateBomb();
+    combo = 0;
+    spawn();
+    return;
+  }
   merge();
   const cleared = clearLines();
   if (cleared > 0) {
@@ -234,6 +267,15 @@ function lockPiece() {
   spawn();
 }
 
+function launchBomb() {
+  if (paused || gameOver || bombs <= 0 || current.isBomb) return;
+  const bomb = { type: 'bomb', shape: [[9]], x: Math.floor(COLS / 2), y: 0, isBomb: true, bombOrientation: 'h' };
+  if (collide(bomb.shape, bomb.x, bomb.y)) return;
+  bombs--;
+  current = bomb;
+  updateHUD();
+}
+
 function spawn() {
   current = next;
   next = randomPiece();
@@ -247,6 +289,7 @@ function updateHUD() {
   scoreEl.textContent = score.toLocaleString();
   linesEl.textContent = lines;
   levelEl.textContent = level;
+  bombsEl.textContent = bombs;
 }
 
 function hexToRgb(hex) {
@@ -328,6 +371,48 @@ function drawBlock(context, x, y, colorIndex, size, alpha) {
   context.globalAlpha = 1;
 }
 
+function drawArrowHead(context, x, y, angleDeg) {
+  const angle = (angleDeg * Math.PI) / 180;
+  const len = 5;
+  context.save();
+  context.translate(x, y);
+  context.rotate(angle);
+  context.beginPath();
+  context.moveTo(0, 0);
+  context.lineTo(-len, -len / 2);
+  context.moveTo(0, 0);
+  context.lineTo(-len, len / 2);
+  context.stroke();
+  context.restore();
+}
+
+function drawBombBlock(context, x, y, size, orientation, alpha) {
+  context.globalAlpha = alpha ?? 1;
+  context.fillStyle = BOMB_COLOR;
+  context.fillRect(x * size + 1, y * size + 1, size - 2, size - 2);
+
+  context.strokeStyle = '#000';
+  context.lineWidth = 2;
+  const cx = x * size + size / 2;
+  const cy = y * size + size / 2;
+  const half = size * 0.3;
+  context.beginPath();
+  if (orientation === 'v') {
+    context.moveTo(cx, cy - half);
+    context.lineTo(cx, cy + half);
+    context.stroke();
+    drawArrowHead(context, cx, cy - half, -90);
+    drawArrowHead(context, cx, cy + half, 90);
+  } else {
+    context.moveTo(cx - half, cy);
+    context.lineTo(cx + half, cy);
+    context.stroke();
+    drawArrowHead(context, cx - half, cy, 180);
+    drawArrowHead(context, cx + half, cy, 0);
+  }
+  context.globalAlpha = 1;
+}
+
 function drawGrid() {
   ctx.strokeStyle = getComputedStyle(document.body).getPropertyValue('--grid-line').trim();
   ctx.lineWidth = 0.5;
@@ -358,13 +443,18 @@ function draw() {
   const gy = ghostY();
   for (let r = 0; r < current.shape.length; r++)
     for (let c = 0; c < current.shape[r].length; c++)
-      if (current.shape[r][c])
-        drawBlock(ctx, current.x + c, gy + r, current.shape[r][c], BLOCK, 0.2);
+      if (current.shape[r][c]) {
+        if (current.isBomb) drawBombBlock(ctx, current.x + c, gy + r, BLOCK, current.bombOrientation, 0.2);
+        else drawBlock(ctx, current.x + c, gy + r, current.shape[r][c], BLOCK, 0.2);
+      }
 
   // current piece
   for (let r = 0; r < current.shape.length; r++)
-    for (let c = 0; c < current.shape[r].length; c++)
-      drawBlock(ctx, current.x + c, current.y + r, current.shape[r][c], BLOCK);
+    for (let c = 0; c < current.shape[r].length; c++) {
+      if (!current.shape[r][c]) continue;
+      if (current.isBomb) drawBombBlock(ctx, current.x + c, current.y + r, BLOCK, current.bombOrientation);
+      else drawBlock(ctx, current.x + c, current.y + r, current.shape[r][c], BLOCK);
+    }
 }
 
 function drawNext() {
@@ -475,6 +565,7 @@ function init(startLevel) {
   paused = false;
   gameOver = false;
   combo = 0;
+  bombs = BOMB_START_COUNT;
   dropInterval = Math.max(100, 1000 - (lvl - 1) * 90);
   dropAccum = 0;
   lastTime = performance.now();
@@ -516,6 +607,9 @@ document.addEventListener('keydown', e => {
     case 'Space':
       e.preventDefault();
       hardDrop();
+      break;
+    case 'Digit1':
+      launchBomb();
       break;
   }
   updateHUD();
