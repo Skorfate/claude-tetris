@@ -68,7 +68,7 @@ function getHighscores() {
   try {
     const raw = JSON.parse(localStorage.getItem('tetris-highscores'));
     if (!Array.isArray(raw)) return [];
-    return raw.filter(h => h && typeof h.name === 'string' && Number.isFinite(h.score));
+    return raw.filter(h => h && typeof h.name === 'string' && Number.isFinite(h.score)).slice(0, 3);
   } catch (e) {
     return [];
   }
@@ -395,7 +395,7 @@ function endGame() {
   overlay.classList.remove('hidden');
 
   lastSavedEntry = null;
-  const qualifies = highscores.length < 5 || score > Math.min(...highscores.map(h => h.score));
+  const qualifies = highscores.length < 3 || score > Math.min(...highscores.map(h => h.score));
   if (qualifies) {
     playerNameInput.classList.remove('hidden');
     saveScoreBtn.classList.remove('hidden');
@@ -540,7 +540,7 @@ saveScoreBtn.addEventListener('click', () => {
   const entry = { name, score };
   highscores.push(entry);
   highscores.sort((a, b) => b.score - a.score);
-  highscores = highscores.slice(0, 5);
+  highscores = highscores.slice(0, 3);
   setHighscores(highscores);
   lastSavedEntry = highscores.includes(entry) ? entry : null;
   playerNameInput.classList.add('hidden');
